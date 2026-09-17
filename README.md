@@ -76,7 +76,6 @@ python main.py
 ```
 text
 $ python main.py
-Эмулятор оболочки ОС. Этап 1.
 Введите команду. Для выхода используйте exit.
 user@host:~$ ls
 ls: []
