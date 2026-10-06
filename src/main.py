@@ -6,10 +6,10 @@ import shlex
 import argparse
 
 
-def get_prompt(vfs_name: str) -> str:
+def get_prompt(vfs_path: str) -> str:
     user = getpass.getuser()
     host = socket.gethostname()
-    return f"{user}@{host}:{vfs_name}$ "
+    return f"{user}@{host}:{vfs_path}$ "
 
 
 def cmd_ls(args):
@@ -36,11 +36,10 @@ COMMANDS = {
 }
 
 
-def execute_script(script_path: str, vfs_name: str, debug: bool = False):
+def execute_script(script_path: str, vfs_path: str, debug: bool = False):
     if not os.path.isfile(script_path):
         print(f"Ошибка: файл скрипта '{script_path}' не найден.", file=sys.stderr)
         return False
-
     print(f"=== Выполнение стартового скрипта: {script_path} ===")
     try:
         with open(script_path, "r", encoding="utf-8") as f:
@@ -54,8 +53,7 @@ def execute_script(script_path: str, vfs_name: str, debug: bool = False):
         line = raw_line.strip()
         if not line or line.startswith("#") or line.startswith("//"):
             continue
-
-        prompt = get_prompt(vfs_name)
+        prompt = get_prompt(vfs_path)
         print(f"{prompt}{line}")
 
         try:
@@ -71,7 +69,6 @@ def execute_script(script_path: str, vfs_name: str, debug: bool = False):
         cmd = parts[0]
         args = parts[1:]
         handler = COMMANDS.get(cmd)
-
         if handler is None:
             print(f"Ошибка: неизвестная команда '{cmd}'")
             error_count += 1
@@ -87,16 +84,15 @@ def execute_script(script_path: str, vfs_name: str, debug: bool = False):
         except Exception as e:
             print(f"Ошибка выполнения: {e}")
             error_count += 1
-
     print(f"=== Скрипт завершён. Ошибочных строк: {error_count} ===")
     return error_count == 0
 
 
-def run_interactive(vfs_name: str):
+def run_interactive(vfs_path: str):
     print("Введите команду. Для выхода используйте exit.")
     while True:
         try:
-            line = input(get_prompt(vfs_name))
+            line = input(get_prompt(vfs_path))
         except (EOFError, KeyboardInterrupt):
             print("\nВыход.")
             break
@@ -104,7 +100,6 @@ def run_interactive(vfs_name: str):
         line = line.strip()
         if not line:
             continue
-
         try:
             parts = shlex.split(line)
         except ValueError as e:
@@ -121,7 +116,6 @@ def run_interactive(vfs_name: str):
         if handler is None:
             print(f"Ошибка: неизвестная команда '{cmd}'")
             continue
-
         try:
             handler(args)
         except ValueError as e:
@@ -138,7 +132,7 @@ def parse_args():
         "--vfs",
         type=str,
         default="myvfs",
-        help="Имя виртуальной файловой системы (отображается в приглашении).",
+        help="Путь к физическому расположению VFS.",
     )
     parser.add_argument(
         "--startup",
@@ -157,11 +151,10 @@ def parse_args():
 def main():
     args = parse_args()
 
-    if args.debug:
-        print("=== Параметры запуска ===")
-        print(f"VFS: {args.vfs}")
-        print(f"Startup script: {args.startup}")
-        print("=========================")
+    print("=== Параметры запуска ===")
+    print(f"VFS: {args.vfs}")
+    print(f"Startup script: {args.startup}")
+    print("=========================")
 
     if args.startup:
         success = execute_script(args.startup, args.vfs, debug=args.debug)

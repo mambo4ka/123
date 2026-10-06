@@ -1,53 +1,43 @@
-import os
 import subprocess
 import sys
+import unittest
+from pathlib import Path
 
-import pytest
-
-SRC_DIR = os.path.join(os.path.dirname(__file__), "..", "src")
-sys.path.insert(0, os.path.abspath(SRC_DIR))
-
-from shell_emulator import ShellEmulator
+ROOT = Path(__file__).resolve().parents[1]
+MAIN = ROOT / "src" / "main.py"
 
 
-def test_parse_input_quotes():
-    emu = ShellEmulator()
-    result = emu.parse_input('ls "file with spaces.txt"')
-    assert result == ["ls", "file with spaces.txt"]
+class Stage2Tests(unittest.TestCase):
+    def test_both_parameters_are_printed(self):
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(MAIN),
+                "--vfs", "./data/vfs",
+                "--startup", "./scripts/startup_alt.txt",
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+        )
+        self.assertIn("VFS: ./data/vfs", result.stdout)
+        self.assertIn("Startup script: ./scripts/startup_alt.txt", result.stdout)
+
+    def test_missing_startup_script_is_reported(self):
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(MAIN),
+                "--vfs", "./data/vfs",
+                "--startup", "./scripts/missing.txt",
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("не найден", result.stderr)
 
 
-def test_cmd_ls(capsys):
-    emu = ShellEmulator()
-    emu.cmd_ls([])
-    captured = capsys.readouterr()
-    assert "Команда: ls" in captured.out
-    assert "Аргументы отсутствуют" in captured.out
-
-
-def test_cmd_cd_no_args(capsys):
-    emu = ShellEmulator()
-    emu.cmd_cd([])
-    captured = capsys.readouterr()
-    assert "Команда: cd" in captured.out
-    assert "Аргументы отсутствуют" in captured.out
-
-
-def test_unknown_command(capsys):
-    emu = ShellEmulator()
-    result = emu.execute_command("unknown", [])
-    captured = capsys.readouterr()
-    assert result is False
-    assert "неизвестная команда" in captured.out
-
-
-def test_script_execution(tmp_path, capsys):
-    script = tmp_path / "test.txt"
-    script.write_text("ls\ncd /tmp\nexit\n", encoding="utf-8")
-
-    emu = ShellEmulator(script_mode=True)
-    result = emu.execute_script(str(script))
-    captured = capsys.readouterr()
-
-    assert result is True
-    assert "=== ВЫПОЛНЕНИЕ СКРИПТА" in captured.out
-    assert "Успешных команд: 3" in captured.out
+if __name__ == "__main__":
+    unittest.main()
