@@ -1,0 +1,7 @@
+ls
+cd /home/user
+pwd
+echo "Hello, world!"
+ls -la
+cd
+exit

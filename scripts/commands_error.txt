@@ -1,0 +1,6 @@
+ls
+cd /tmp
+ls "file with spaces.txt"
+cd
+unknown_command
+exit
